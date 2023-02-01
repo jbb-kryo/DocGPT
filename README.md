@@ -22,7 +22,7 @@ openai.api_key = "INSERT-CHATGPT-API-KEY-HERE"
 
 1. Pre-requisites:
  - Install Python 3 on your computer.
- - Install the required libraries (time, socket, os, and tkinter).
+ - Install the required libraries (openai, time, socket, os, and tkinter).
  - Ensure that the document you want to upload (if you choose to upload a document) is in the same directory as the script.
 
 2. Run the script by executing the following command in your terminal or command prompt:
