@@ -12,7 +12,12 @@ import openai
 class MainMenu:
     def __init__(self, master):
         self.master = master
-        master.title("DocGPT v1.0")
+        self.master.geometry("250x250")
+        self.master.title("DocGPT v1.0")
+        self.splash = tk.PhotoImage(file="splash.png")
+        self.splash_label = tk.Label(self.master, image=self.splash)
+        self.splash_label.pack()
+        self.master.after(2000, self.show_main_menu)
 
         self.api_key = self.get_api_key()
         if not self.api_key:
@@ -36,6 +41,9 @@ class MainMenu:
 
         self.quit_button = tk.Button(master, text="Quit", command=master.quit)
         self.quit_button.pack()
+
+    def show_main_menu(self):
+        self.splash_label.destroy()
 
     # Defines the api key
     def get_api_key(self):
