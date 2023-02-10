@@ -1,97 +1,149 @@
-import openai
-import tkinter as tk
-from tkinter import filedialog
+import os
+import json
 import time
 import socket
+import tkinter as tk
+from tkinter import filedialog
+from tkinter import messagebox
+from tkinter import Entry
+import openai
 
-def open_file_dialog():
+# Defines the main menu
+class MainMenu:
+    def __init__(self, master):
+        self.master = master
+        self.master.geometry("250x250")
+        self.master.title("DocGPT v1.0")
+        self.splash = tk.PhotoImage(file="splash.png")
+        self.splash_label = tk.Label(self.master, image=self.splash)
+        self.splash_label.pack()
+        self.master.after(2000, self.show_main_menu)
+
+        self.api_key = self.get_api_key()
+        if not self.api_key:
+            self.enter_api_key()
+
+        self.upload_button = tk.Button(
+            master, text="Upload a document", command=self.upload_document)
+        self.upload_button.pack()
+
+        self.ask_question_button = tk.Button(
+            master, text="Ask a question", command=self.ask_question)
+        self.ask_question_button.pack()
+
+        self.view_results_button = tk.Button(
+            master, text="View results", command=self.view_results)
+        self.view_results_button.pack()
+
+        self.view_api_key_button = tk.Button(
+            master, text="View API Key", command=self.view_api_key)
+        self.view_api_key_button.pack()
+
+        self.quit_button = tk.Button(master, text="Quit", command=master.quit)
+        self.quit_button.pack()
+
+    def show_main_menu(self):
+        self.splash_label.destroy()
+
+    # Defines the api key
+    def get_api_key(self):
+        if os.path.exists("api_key.gpt"):
+            with open("api_key.gpt", "r") as f:
+                api_key = f.read()
+                return api_key.strip()
+        return None
+
+    def enter_api_key(self):
+        api_key = tk.simpledialog.askstring(
+            "API Key", "Enter your OpenAI API Key:")
+        with open("api_key.gpt", "w") as f:
+            f.write(api_key)
+        self.api_key = api_key
+
+    # Defines the upload document function
+    def upload_document(self):
+        openai.api_key = self.api_key
+        file_path = filedialog.askopenfilename(filetypes=[("Text files", "*.txt"),
+                                                          ("Word files", "*.doc"),
+                                                          ("Excel files", "*.xls")])
+        if file_path:
+            prompt = "What would you like to ask about the uploaded document?"
+            question = tk.simpledialog.askstring("Question", prompt)
+            if question:
+                response = openai.Completion.create(
+                    engine="text-davinci-002",
+                    prompt=prompt,
+                    max_tokens=1024,
+                    n=1,
+                    stop=None,
+                    temperature=0.5,
+                ).choices[0].text
+                result = {"timestamp": time.time(), "ip": socket.gethostbyname(socket.gethostname()),
+                          "document": file_path, "question": question, "answer": response}
+                self.store_result(result)
+                self.ask_another_question(result)
+
+    # Defines the ask a question function
+    def ask_question(self):
+        openai.api_key = self.api_key
+        question = tk.simpledialog.askstring(
+            "Question", "What would you like to ask ChatGPT?")
+        if question:
+            response = openai.Completion.create(
+                engine="text-davinci-002",
+                prompt=question,
+                max_tokens=1024,
+                n=1,
+                stop=None,
+                temperature=0.5,
+            ).choices[0].text
+            result = {"timestamp": time.time(), "ip": socket.gethostbyname(socket.gethostname()),
+                      "document": None, "question": question, "answer": response}
+            self.store_result(result)
+            self.ask_another_question(result)
+
+    # Defines the view results function
+    def view_results(self):
+        if os.path.exists("results.json"):
+            with open("results.json", "r") as f:
+                results = json.load(f)
+                message = "Results:\n"
+                for result in results:
+                    message += "Timestamp: {}\n".format(result["timestamp"])
+                    message += "IP Address: {}\n".format(result["ip"])
+                    message += "Document: {}\n".format(result["document"])
+                    message += "Question: {}\n".format(result["question"])
+                    message += "Answer: {}\n\n".format(result["answer"])
+                messagebox.showinfo("Results", message)
+        else:
+            messagebox.showwarning("Warning", "No results found.")
+
+    # Defines the view api key function
+    def view_api_key(self):
+        messagebox.showinfo("API Key", self.api_key)
+
+    # Defines the ask another question function
+    def ask_another_question(self, result):
+        answer = messagebox.askyesno(
+            "Another Question", "Would you like to ask another question about the same document?")
+        if answer:
+            self.ask_question()
+        else:
+            self.view_results()
+
+    # Defines the results storage function
+    def store_result(self, result):
+        if os.path.exists("results.json"):
+            with open("results.json", "r") as f:
+                results = json.load(f)
+            results.append(result)
+        else:
+            results = [result]
+        with open("results.json", "w") as f:
+            json.dump(results, f)
+
+
+if __name__ == "__main__":
     root = tk.Tk()
-    root.withdraw()
-    file_path = filedialog.askopenfilename()
-    return file_path
-
-# Initialize the API key for OpenAI
-openai.api_key = "INSERT-CHATGPT-API-KEY-HERE"
-
-# Define a function to ask a question about a document
-def ask_question(prompt, document):
-    completions = openai.Completion.create(
-        engine="text-davinci-002",
-        prompt=prompt,
-        max_tokens=1024,
-        n=1,
-        stop=None,
-        temperature=0.5,
-        frequency_penalty=0,
-        presence_penalty=0,
-    )
-
-    message = completions.choices[0].text
-    return message
-
-def get_ip():
-    s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-    try:
-        # doesn't even have to be reachable
-        s.connect(('10.255.255.255', 1))
-        IP = s.getsockname()[0]
-    except:
-        IP = '127.0.0.1'
-    finally:
-        s.close()
-    return IP
-
-print("+" + "-"*50 + "+")
-print("|" + " "*50 + "|")
-print("|  Upload a document or ask a question to DocGPT  |")
-print("|" + " "*50 + "|")
-print("+" + "-"*50 + "+")
-
-# Choose between uploading a document or asking a question
-choice = input("Enter '1' to upload a document or '2' to ask a question: ")
-
-# Upload the document or ask the question
-if choice == "1":
-    file_path = open_file_dialog()
-    with open(file_path, encoding='utf8') as file:
-        document = file.read()
-else:
-    document = ""
-
-results = []
-while True:
-    prompt = input("Enter your question: ")
-    answer = ask_question(prompt, document)
-    results.append((time.time(), get_ip(), prompt, answer))
-
-    continue_asking = input("Do you want to ask another question (yes/no)? ")
-    if continue_asking.lower() != "yes":
-        break
-
-print("\n+" + "-"*50 + "+")
-print("|" + " "*50 + "|")
-print("|  Displaying all the results  |")
-print("|" + " "*50 + "|")
-print("+" + "-"*50 + "+")
-
-for result in results:
-    print("Time:", time.ctime(result[0]))
-    print("IP:", result[1])
-    print("Question:", result[2])
-    print("Answer:", result[3], "\n")
-
-print("\n+" + "-"*50 + "+")
-print("|" + " "*50 + "|")
-print("| Saving the results to a file |")
-print("|" + " "*50 + "|")
-print("+" + "-"*50 + "+")
-
-filename = input("Enter a filename to save the results: ")
-with open(filename, "w") as file:
-    for result in results:
-        file.write("Time: " + time.ctime(result[0]) + "\n")
-        file.write("IP: " + result[1] + "\n")
-        file.write("Question: " + result[2] + "\n")
-        file.write("Answer: " + result[3] + "\n\n")
-
-print("Results saved successfully!")
+    my_gui = MainMenu(root)
+    root.mainloop()
