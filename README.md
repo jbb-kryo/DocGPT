@@ -1,6 +1,8 @@
 ![docgpt-banner](https://user-images.githubusercontent.com/61083145/217973677-e9f666fd-7afc-417c-883a-f98ade852699.png)
 <i>A script that empowers a user to upload a document and ask questions of ChatGPT for document analysis.</i>
 
+Compatible with Windows, Linux and MacOS.
+
 ## Step-by-Step Instructions
 
 ### Install Python 3
